@@ -1,0 +1,27 @@
+<link rel="stylesheet" href="/static/bootstrap/css/bootstrap.min.css">
+<div class="col-sm-6 col-sm-offset-3 panel panel-primary">
+    <div class="panel-heading">
+        <span class="h1">YOTO</span>
+    </div>
+    <div class="panel-body">
+    <fieldset>
+        <legend>Login, please!</legend>
+        {% if error %}
+            {{ error }}
+        {% endif %}
+        <form method="post" action="/login/">
+            {% csrf_token %}
+            <div class="form-group">
+            <label>Username </label>
+            <input type="text" placeholder="username" name='username' class="form-control">
+            </div>
+            
+            <label>Password </label>
+            <input type="text" placeholder="Password" name='password' class="form-control">
+            </div>
+
+            <input type="submit" value="login" class="btn btn-primary">
+        </form>
+    </fieldset>
+    </div>
+</div>

@@ -1,0 +1,21 @@
+{% include 'header.html' %}
+<div class="col-sm-6 col-sm-offset-3 panel panel-primary">
+    <div class="panel-heading">
+        Channel Information
+    </div>
+    <div class="panel-body">
+    <fieldset>
+        <legend>Add Channel</legend>
+
+    <form method="post" action="/callback/">
+        {% csrf_token %}
+        <div class="form-group">
+            <label>Channel Name</label>
+            {{channelForm.name}}
+        </div>
+            {{channelForm.token}}
+            {{channelForm.refresh_token}}
+            <input type="submit" value="Add" class="btn btn-primary">
+    </form>
+    </fieldset>
+</div>
