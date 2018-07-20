@@ -9,6 +9,7 @@ from yoto import forms
 from yoto import models
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
+from moviepy.editor import *
 
 import urllib2
 import httplib
@@ -109,8 +110,20 @@ def upload(request):
 
   if request.method == "POST":
     local_file_name = download(request.POST['url'])
+    
+    start_time = getTime(request.POST['start_time'])
+    end_time =getTime(request.POST['end_time'])
+
+    #get channel
     channel = models.Channel.objects.get(id=request.POST.get('channel', None))
     configs = json.load( open(os.path.abspath(os.path.join(os.path.dirname(__file__),CLIENT_SECRETS_FILE)), "r") )
+    
+    #edit video
+    logo = os.path.join(BASE_DIR, 'yoto/media/' + str( channel.logo))
+    intro = os.path.join(BASE_DIR, 'yoto/media/' + str( channel.intro))
+    
+    new_video = editVideo( intro, logo, local_file_name, start_time, end_time)
+    new_video.write_videofile('videome.mp4')
 
     credentials = channel.getCredential ( configs['web'] )
     youtube = build(
@@ -120,8 +133,8 @@ def upload(request):
     )
     options = request.POST.copy()
     options['file'] = local_file_name
-    print options, "OPTIONS ON"
-    initialize_upload(youtube, options)
+    
+    #initialize_upload(youtube, options)
 
     # initialize_upload(youtube, request.POST)
   channels = models.Channel.objects.all()
@@ -129,31 +142,33 @@ def upload(request):
 @login_required
 def oauthCallback(request):
   if request.method == "POST":
-    channelForm = forms.ChannelForm( request.POST)
+    #print request.POST, request.FILES
+    channelForm = forms.ChannelForm( request.POST, request.FILES)
     if channelForm.is_valid():
       channelForm.save();
       return HttpResponseRedirect("/channels/")
     else:
+      print channelForm.errors
       return render(request, "callbackprompt.html", locals())
 
   code, state = request.GET['code'], request.GET.get("state")
   
-  #//flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
-      #//CLIENT_SECRETS_FILE, scopes=YOUTUBE_UPLOAD_SCOPE, state=state)
+  flow = google_auth_oauthlib.flow.Flow.from_client_secrets_file(
+      CLIENT_SECRETS_FILE, scopes=YOUTUBE_UPLOAD_SCOPE, state=state)
   
-  #//flow.redirect_uri = DOMAIN + '/callback/'
+  flow.redirect_uri = DOMAIN + '/callback/'
 
-  #//flow.fetch_token(authorization_response=request.get_full_path())
-  credentials = {
-    "token" : "ya29.Glv9BV1iPcc_38h83wpuab20VXsAP4O35tVMyA58eSrGDH5_uO3Fnzh0Fn0xSTLawyfZrEDtxN7zZAt5OlEY2boespQxCU4TT3sTw5frqMORfRjTbZIDRBjnMxdW",
-    "refresh_token" : "1/hLEscGY2Ipwy9_cxHF_LwKxiWqQ_o6z4nJBAAhyYDzEdCay5Y2trfSs6BVH73qBd"
-  }#flow.credentials
-  #credentials = credentials_to_dict(credentials)
+  flow.fetch_token(authorization_response=request.get_full_path())
+  #credentials = {
+  #  "access_token" : "ya29.Glv9BV1iPcc_38h83wpuab20VXsAP4O35tVMyA58eSrGDH5_uO3Fnzh0Fn0xSTLawyfZrEDtxN7zZAt5OlEY2boespQxCU4TT3sTw5frqMORfRjTbZIDRBjnMxdW",
+  #  "refresh_token" : "1/hLEscGY2Ipwy9_cxHF_LwKxiWqQ_o6z4nJBAAhyYDzEdCay5Y2trfSs6BVH73qBd"
+  #}#
+  credentials = credentials_to_dict(flow.credentials)
   channelForm = forms.ChannelForm( credentials)
   return render(request, "callbackprompt.html", locals())
 
 def credentials_to_dict(credentials):
-  return {'token': credentials.token,
+  return {'access_token': credentials.token,
           'refresh_token': credentials.refresh_token,
           'token_uri': credentials.token_uri,
           'client_id': credentials.client_id,
@@ -190,6 +205,42 @@ def initialize_upload(youtube, options):
   )
 
   resumable_upload(insert_request)
+
+def getTime(time_str):
+  timeParts = time_str.split(":")
+  for timepart in timeParts:
+    try:
+      int(timepart)
+    except:
+      return 0
+
+  h = 0
+  m = 0
+  s = 0
+  if ( len(timeParts) == 3):
+    h,m,s = timeParts
+  elif ( len(timeParts) == 2):
+    m,s = timeParts
+  
+  elif ( len(timeParts)==1):
+    s, = timeParts
+  totalSeconds = int(h) * 3600 + int(m) * 60 + int(s)
+  print totalSeconds, "TOTAL SECS"
+  return int(totalSeconds)
+
+def editVideo(intro_video, logo, new_video, startTime, endTime):
+  
+  intro_clip = VideoFileClip(intro_video)
+  new_clip = VideoFileClip(new_video)
+  endTime = new_clip.duration if startTime >= endTime else endTime
+  new_clip_subclipped = new_clip.subclip(startTime, endTime)
+
+  waterMark = ImageClip(logo).set_duration(new_clip_subclipped.duration).resize(height=50).margin(right=1,top=1, opacity=0).set_pos((0,new_clip_subclipped.size[0]-50))
+
+  watermarked_video = CompositeVideoClip([new_clip_subclipped, waterMark])
+  final_video = concatenate_videoclips([intro_clip, watermarked_video])
+  return final_video
+  
 
 # This method implements an exponential backoff strategy to resume a
 # failed upload.

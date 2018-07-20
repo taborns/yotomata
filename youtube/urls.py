@@ -29,3 +29,5 @@ urlpatterns = [
     url(r'^logout/', my_view.log_out),
 ]
 
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+

@@ -9,6 +9,8 @@ class Channel(models.Model):
     name = models.CharField(max_length=200)
     access_token = models.CharField(max_length=300)
     refresh_token = models.CharField(max_length=300)
+    logo = models.FileField(upload_to='logos/')
+    intro = models.FileField(blank=True, null=True, upload_to='intros/')
 
     def getCredential(self, data ):
         required_keys = ['client_id', 'client_secret', 'token_uri']

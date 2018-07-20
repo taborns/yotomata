@@ -14,11 +14,17 @@ class ChannelForm(forms.ModelForm):
                     'placeholder' : 'Channel Name'
                     }
             ),
-            'token' : forms.HiddenInput(
+            'access_token' : forms.HiddenInput(
                 attrs={'class' : 'form-control'}
             ),
             'refresh_token' : forms.HiddenInput(
                 attrs={'class' : 'form-control'}
             ),
+            'logo' : forms.FileInput(
+                attrs={'class' : 'form-control'}
+            ),
+            'intro' : forms.FileInput(
+                attrs={'class' : 'form-control'}
+            )
         }
 

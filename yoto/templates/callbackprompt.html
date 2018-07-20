@@ -7,14 +7,23 @@
     <fieldset>
         <legend>Add Channel</legend>
 
-    <form method="post" action="/callback/">
+    <form enctype="multipart/form-data" method="post" action="/callback/">
         {% csrf_token %}
         <div class="form-group">
             <label>Channel Name</label>
             {{channelForm.name}}
         </div>
-            {{channelForm.token}}
+            {{channelForm.access_token}}
             {{channelForm.refresh_token}}
+            <div class="form-group">
+                <label>Logo</label>
+                {{channelForm.logo}}
+            </div>
+
+            <div class="form-group">
+                <label>Intro</label>
+                {{channelForm.intro}}
+            </div>
             <input type="submit" value="Add" class="btn btn-primary">
     </form>
     </fieldset>
