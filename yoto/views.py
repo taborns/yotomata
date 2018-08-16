@@ -110,7 +110,7 @@ def get_authenticated_service(request):
 def upload(request):
 
   if request.method == "POST":
-    local_file_name = True#download(request.POST['url'])
+    local_file_name = download(request.POST['url'])
     
     if local_file_name:
       thumbnail_file = request.FILES['thumbnail']
@@ -118,10 +118,10 @@ def upload(request):
       filename = fs.save('thumbs/' + thumbnail_file.name, thumbnail_file)
       uploaded_file_url = fs.url(filename)
       thumb_url = HOST + "/" + uploaded_file_url
-
+      print "THUMB URL", thumb_url
       start_time = getTime(request.POST['start_time'])
       end_time =getTime(request.POST['end_time'])
-
+      print "STart time", start_time, end_time
       #get channel
       channel = models.Channel.objects.get(id=request.POST.get('channel', None))
       configs = json.load( open(os.path.abspath(os.path.join(os.path.dirname(__file__),CLIENT_SECRETS_FILE)), "r") )
@@ -142,7 +142,7 @@ def upload(request):
       )
       options = request.POST.copy()
       options['file'] = video_local_file_name
-
+      options['thumbnail'] = thumb_url
       initialize_upload(youtube, options)
 
   channels = models.Channel.objects.all()
@@ -199,7 +199,12 @@ def initialize_upload(youtube, options):
       title=options['title'],
       description=options['description'],
       tags=tags,
-      categoryId=options['category']
+      categoryId=options['category'],
+      thumbnails = dict (
+        default=dict(
+          url=options['thumbnail']
+        )
+      )
     ),
     status=dict(
       privacyStatus=options['privacyStatus']
@@ -238,7 +243,7 @@ def getTime(time_str):
   return int(totalSeconds)
 
 def editVideo(intro_video, logo, new_video, startTime, endTime):
-  
+  print new_video, intro_video, "AND ALL";
   intro_clip = VideoFileClip(intro_video)
   new_clip = VideoFileClip(new_video)
   endTime = new_clip.duration if startTime >= endTime else endTime
@@ -287,6 +292,7 @@ def resumable_upload(insert_request):
 
 def download(url):
   final_url = getDownloadLink(url);
+  print "DOwnloading"
   if not final_url:
     return final_url
 
@@ -300,7 +306,7 @@ def download(url):
     for chunk in response.iter_content(chunk_size=1024): 
       if chunk: # filter out keep-alive new chunks
         f.write(chunk)
-
+  print "Downloading file name", file_name
   return file_name
 
 def getDownloadLink(url):
