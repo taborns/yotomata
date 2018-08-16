@@ -6,7 +6,7 @@
     <div class="panel-body">
     <fieldset>
         <legend>Add video</legend>
-        <form method="post" action="/upload/">
+        <form method="post" action="/upload/" enctype="multipart/form-data">
             {% csrf_token %}
             <div class="form-group">
             <label> Video Title </label>
@@ -40,7 +40,7 @@
             
             <div class="form-group">
                 <label>Thumbnail URL</label> 
-                <input type="text" placeholder="Thumbnail" name='thumbnail' class="form-control">
+                <input type="file" placeholder="Thumbnail" name='thumbnail' class="form-control">
             </div>
             
             <div class="form-group">

@@ -28,11 +28,12 @@ from oauth2client.file import Storage
 from oauth2client.tools import argparser
 import google.oauth2.credentials
 import google_auth_oauthlib.flow
+from django.core.files.storage import FileSystemStorage
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 httplib2.RETRIES = 1
-
+HOST = "http://localhost:8000"
 # Maximum number of times to retry before giving up.
 MAX_RETRIES = 10
 
@@ -109,39 +110,49 @@ def get_authenticated_service(request):
 def upload(request):
 
   if request.method == "POST":
-    local_file_name = download(request.POST['url'])
+    local_file_name = True#download(request.POST['url'])
     
-    start_time = getTime(request.POST['start_time'])
-    end_time =getTime(request.POST['end_time'])
+    if local_file_name:
+      thumbnail_file = request.FILES['thumbnail']
+      fs = FileSystemStorage()
+      filename = fs.save('thumbs/' + thumbnail_file.name, thumbnail_file)
+      uploaded_file_url = fs.url(filename)
+      thumb_url = HOST + "/" + uploaded_file_url
 
-    #get channel
-    channel = models.Channel.objects.get(id=request.POST.get('channel', None))
-    configs = json.load( open(os.path.abspath(os.path.join(os.path.dirname(__file__),CLIENT_SECRETS_FILE)), "r") )
-    
-    #edit video
-    logo = os.path.join(BASE_DIR, 'yoto/media/' + str( channel.logo))
-    intro = os.path.join(BASE_DIR, 'yoto/media/' + str( channel.intro))
-    
-    new_video = editVideo( intro, logo, local_file_name, start_time, end_time)
-    new_video.write_videofile('videome.mp4')
+      start_time = getTime(request.POST['start_time'])
+      end_time =getTime(request.POST['end_time'])
 
-    credentials = channel.getCredential ( configs['web'] )
-    youtube = build(
-      YOUTUBE_API_SERVICE_NAME, 
-      YOUTUBE_API_VERSION,
-      http=credentials.authorize(httplib2.Http())
-    )
-    options = request.POST.copy()
-    options['file'] = local_file_name
-    
-    #initialize_upload(youtube, options)
+      #get channel
+      channel = models.Channel.objects.get(id=request.POST.get('channel', None))
+      configs = json.load( open(os.path.abspath(os.path.join(os.path.dirname(__file__),CLIENT_SECRETS_FILE)), "r") )
+      
+      #edit video
+      logo = os.path.join(BASE_DIR, 'yoto/media/' + str( channel.logo))
+      intro = os.path.join(BASE_DIR, 'yoto/media/' + str( channel.intro))
+      
+      new_video = editVideo( intro, logo, local_file_name, start_time, end_time)
+      video_local_file_name = local_file_name + "videome.mp4"
+      new_video.write_videofile(local_file_name + "videome.mp4")
 
-    # initialize_upload(youtube, request.POST)
+      credentials = channel.getCredential ( configs['web'] )
+      youtube = build(
+        YOUTUBE_API_SERVICE_NAME, 
+        YOUTUBE_API_VERSION,
+        http=credentials.authorize(httplib2.Http())
+      )
+      options = request.POST.copy()
+      options['file'] = video_local_file_name
+
+      initialize_upload(youtube, options)
+
   channels = models.Channel.objects.all()
   return render( request, "add_video.html", locals())
+
 @login_required
 def oauthCallback(request):
+
   if request.method == "POST":
+    
     #print request.POST, request.FILES
     channelForm = forms.ChannelForm( request.POST, request.FILES)
     if channelForm.is_valid():
@@ -159,10 +170,7 @@ def oauthCallback(request):
   flow.redirect_uri = DOMAIN + '/callback/'
 
   flow.fetch_token(authorization_response=request.get_full_path())
-  #credentials = {
-  #  "access_token" : "ya29.Glv9BV1iPcc_38h83wpuab20VXsAP4O35tVMyA58eSrGDH5_uO3Fnzh0Fn0xSTLawyfZrEDtxN7zZAt5OlEY2boespQxCU4TT3sTw5frqMORfRjTbZIDRBjnMxdW",
-  #  "refresh_token" : "1/hLEscGY2Ipwy9_cxHF_LwKxiWqQ_o6z4nJBAAhyYDzEdCay5Y2trfSs6BVH73qBd"
-  #}#
+  
   credentials = credentials_to_dict(flow.credentials)
   channelForm = forms.ChannelForm( credentials)
   return render(request, "callbackprompt.html", locals())
@@ -174,6 +182,7 @@ def credentials_to_dict(credentials):
           'client_id': credentials.client_id,
           'client_secret': credentials.client_secret,
           'scopes': credentials.scopes}
+
 @login_required
 def channels(request):
   channels = models.Channel.objects.all()
@@ -201,7 +210,7 @@ def initialize_upload(youtube, options):
   insert_request = youtube.videos().insert(
     part=",".join(body.keys()),
     body=body,
-    media_body=MediaFileUpload(options['file'], chunksize=-1, resumable=True)
+    media_body=MediaFileUpload(options.get('file', None), chunksize=-1, resumable=True)
   )
 
   resumable_upload(insert_request)
@@ -297,15 +306,11 @@ def download(url):
 def getDownloadLink(url):
   endpoint = "https://www.saveitoffline.com/process/?url=youtube-url&type=json".replace("youtube-url", url)
   
-  
-  
   try:
     response = requests.get(endpoint)
     jsonResponse = response.json()
   except:
-    print "ERROR"
     return None
-  
   
   videoQualites = ['1080p', '720p','360p', ]
   urls = jsonResponse['urls']

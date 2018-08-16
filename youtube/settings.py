@@ -25,7 +25,10 @@ SECRET_KEY = '!x+sh-m45p^kkh*5*1ga8mo7oao+tqn-mrzgwpj0*m&cr7@!b9'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    '192.168.1.2',
+    'localhost'
+]
 
 
 # Application definition
@@ -129,3 +132,4 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'yoto/media')
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "yoto/static"),
 ]
+CORS_ORIGIN_ALLOW_ALL=True
