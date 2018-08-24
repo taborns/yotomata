@@ -245,6 +245,7 @@ def getTime(time_str):
 def editVideo(intro_video, logo, new_video, startTime, endTime):
   print new_video, intro_video, "AND ALL";
   intro_clip = VideoFileClip(intro_video)
+  
   new_clip = VideoFileClip(new_video)
   endTime = new_clip.duration if startTime >= endTime else endTime
   new_clip_subclipped = new_clip.subclip(startTime, endTime)
@@ -252,7 +253,7 @@ def editVideo(intro_video, logo, new_video, startTime, endTime):
   waterMark = ImageClip(logo).set_duration(new_clip_subclipped.duration).resize(height=50).margin(right=1,top=1, opacity=0).set_pos((0,new_clip_subclipped.size[0]-50))
 
   watermarked_video = CompositeVideoClip([new_clip_subclipped, waterMark])
-  final_video = concatenate_videoclips([intro_clip, watermarked_video])
+  final_video = concatenate_videoclips([watermarked_video])
   return final_video
   
 
@@ -301,7 +302,8 @@ def download(url):
   file_name = random.choice(['filie_','tabo_','youtu_','video_'])
   file_name += str( random.randint(100, 100000000) )
   file_name += ".mp4"
-
+  file_name = os.path.join(BASE_DIR, 'yoto/media/videos/' + str( file_name))
+  print file_name;
   with open(file_name, 'wb') as f:
     for chunk in response.iter_content(chunk_size=1024): 
       if chunk: # filter out keep-alive new chunks
