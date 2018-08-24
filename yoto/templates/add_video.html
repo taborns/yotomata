@@ -4,8 +4,14 @@
         Add Videos Here
     </div>
     <div class="panel-body">
+            {% if suc_message %}
+                <div class='h4 text-success'> {{suc_message}} </div>
+            {% elif err_message %}
+                <div class='h4 text-danger'> {{ err_message }} </div>
+            {% endif %}
     <fieldset>
         <legend>Add video</legend>
+        
         <form method="post" action="/upload/" enctype="multipart/form-data">
             {% csrf_token %}
             <div class="form-group">

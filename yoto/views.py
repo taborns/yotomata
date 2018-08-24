@@ -10,7 +10,7 @@ from yoto import models
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
 from moviepy.editor import *
-
+from constants import *
 import urllib2
 import httplib
 import httplib2
@@ -33,7 +33,7 @@ from django.core.files.storage import FileSystemStorage
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 httplib2.RETRIES = 1
-HOST = "http://localhost:8000"
+
 # Maximum number of times to retry before giving up.
 MAX_RETRIES = 10
 
@@ -49,7 +49,8 @@ CLIENT_SECRETS_FILE = BASE_DIR + "/yoto/client_secret.json"
 
 # This OAuth 2.0 access scope allows an application to upload files to the
 # authenticated user's YouTube channel, but doesn't allow other types of access.
-YOUTUBE_UPLOAD_SCOPE = ["https://www.googleapis.com/auth/youtube.upload", "https://www.googleapis.com/auth/youtube"]
+YOUTUBE_UPLOAD_SCOPE = ["https://www.googleapis.com/auth/youtube.upload", 
+"https://www.googleapis.com/auth/youtube"]
 YOUTUBE_API_SERVICE_NAME = "youtube"
 YOUTUBE_API_VERSION = "v3"
 
@@ -70,7 +71,6 @@ https://developers.google.com/api-client-library/python/guide/aaa_client_secrets
                                    CLIENT_SECRETS_FILE))
 
 VALID_PRIVACY_STATUSES = ("public", "private", "unlisted")
-DOMAIN = "http://localhost:8000"
 
 def login_sys(request):
   if request.method=='POST':
@@ -110,16 +110,32 @@ def get_authenticated_service(request):
 def upload(request):
 
   if request.method == "POST":
+    thumbnail_file = request.FILES.get('thumbnail', False)
+    if thumbnail_file:
+      import threading
+      my_thread = threading.Thread(target=handleUpload, args=(request,))
+      my_thread.start()
+      suc_message = "You have successfully submitted the video. It is being proccessed."
+    else:
+      err_message = "Please provide a thumbnail"
+
+  channels = models.Channel.objects.all()
+  return render( request, "add_video.html", locals())
+
+
+def handleUpload(request):
+
+  if request.method == "POST":
     local_file_name = "/media/t460r/Disk/ZONE2/my/youtube/yoto/media/videos/test.mp4"#download(request.POST['url'])
     
     if local_file_name:
-      thumbnail_file = request.FILES['thumbnail']
+      thumbnail_file = request.FILES.get('thumbnail', False)
       fs = FileSystemStorage()
       filename = fs.save('thumbs/' + thumbnail_file.name, thumbnail_file)
       thumb_file_url = os.path.join(BASE_DIR, 'yoto/media/thumbs/' + str( thumbnail_file.name))
       start_time = getTime(request.POST['start_time'])
       end_time =getTime(request.POST['end_time'])
-      print "STart time", start_time, end_time
+      
       #get channel
       channel = models.Channel.objects.get(id=request.POST.get('channel', None))
       configs = json.load( open(os.path.abspath(os.path.join(os.path.dirname(__file__),CLIENT_SECRETS_FILE)), "r") )
@@ -145,8 +161,8 @@ def upload(request):
       if video_id:
         upload_thumbnail(youtube, video_id, thumb_file_url )
 
-  channels = models.Channel.objects.all()
-  return render( request, "add_video.html", locals())
+  
+  
 
 @login_required
 def oauthCallback(request):
@@ -235,24 +251,24 @@ def getTime(time_str):
   elif ( len(timeParts)==1):
     s, = timeParts
   totalSeconds = int(h) * 3600 + int(m) * 60 + int(s)
-  print totalSeconds, "TOTAL SECS"
+  
   return int(totalSeconds)
 
 def editVideo(intro_video, logo, new_video, startTime, endTime):
-  print new_video, intro_video, "AND ALL";
-  intro_clip = VideoFileClip(intro_video)
   
+  intro_clip = VideoFileClip(intro_video)
   new_clip = VideoFileClip(new_video)
+  
   endTime = new_clip.duration if startTime >= endTime else endTime
   new_clip_subclipped = new_clip.subclip(startTime, endTime)
-  print "LOGO", logo, "AWESOMss"
-  waterMark = ImageClip(logo).set_duration(intro_clip.duration).resize(height=150).margin(right=8, top=8, opacity=0).set_pos((0.05,0.7), relative=True)
+  waterMark = ImageClip(logo).set_duration(new_clip_subclipped.duration).resize(height=150).margin(right=8, top=8, opacity=0).set_pos((0.05,0.7), relative=True)
   
-  watermarked_video = CompositeVideoClip([intro_clip, waterMark])
+  watermarked_video = CompositeVideoClip([new_clip_subclipped, waterMark])
   final_video = concatenate_videoclips([intro_clip, watermarked_video])
   return final_video
 
 def upload_thumbnail(youtube, video_id, file):
+  print "VIDEO ID", video_id, "FILE", file
   youtube.thumbnails().set(
     videoId=video_id,
     media_body=file
@@ -305,12 +321,12 @@ def download(url):
   file_name += str( random.randint(100, 100000000) )
   file_name += ".mp4"
   file_name = os.path.join(BASE_DIR, 'yoto/media/videos/' + str( file_name))
-  print file_name;
+  
   with open(file_name, 'wb') as f:
     for chunk in response.iter_content(chunk_size=1024): 
       if chunk: # filter out keep-alive new chunks
         f.write(chunk)
-  print "Downloading file name", file_name
+  
   return file_name
 
 def getDownloadLink(url):
