@@ -49,7 +49,7 @@ CLIENT_SECRETS_FILE = BASE_DIR + "/yoto/client_secret.json"
 
 # This OAuth 2.0 access scope allows an application to upload files to the
 # authenticated user's YouTube channel, but doesn't allow other types of access.
-YOUTUBE_UPLOAD_SCOPE = ["https://www.googleapis.com/auth/youtube.upload"]
+YOUTUBE_UPLOAD_SCOPE = ["https://www.googleapis.com/auth/youtube.upload", "https://www.googleapis.com/auth/youtube"]
 YOUTUBE_API_SERVICE_NAME = "youtube"
 YOUTUBE_API_VERSION = "v3"
 
@@ -110,15 +110,13 @@ def get_authenticated_service(request):
 def upload(request):
 
   if request.method == "POST":
-    local_file_name = download(request.POST['url'])
+    local_file_name = "/media/t460r/Disk/ZONE2/my/youtube/yoto/media/videos/test.mp4"#download(request.POST['url'])
     
     if local_file_name:
       thumbnail_file = request.FILES['thumbnail']
       fs = FileSystemStorage()
       filename = fs.save('thumbs/' + thumbnail_file.name, thumbnail_file)
-      uploaded_file_url = fs.url(filename)
-      thumb_url = HOST + "/" + uploaded_file_url
-      print "THUMB URL", thumb_url
+      thumb_file_url = os.path.join(BASE_DIR, 'yoto/media/thumbs/' + str( thumbnail_file.name))
       start_time = getTime(request.POST['start_time'])
       end_time =getTime(request.POST['end_time'])
       print "STart time", start_time, end_time
@@ -132,7 +130,7 @@ def upload(request):
       
       new_video = editVideo( intro, logo, local_file_name, start_time, end_time)
       video_local_file_name = local_file_name + "videome.mp4"
-      new_video.write_videofile(local_file_name + "videome.mp4")
+      new_video.write_videofile(local_file_name + "videome.mp4",  fps=15,  preset='ultrafast',   threads=100)
 
       credentials = channel.getCredential ( configs['web'] )
       youtube = build(
@@ -142,8 +140,10 @@ def upload(request):
       )
       options = request.POST.copy()
       options['file'] = video_local_file_name
-      options['thumbnail'] = thumb_url
-      initialize_upload(youtube, options)
+      
+      video_id = initialize_upload(youtube, options)
+      if video_id:
+        upload_thumbnail(youtube, video_id, thumb_file_url )
 
   channels = models.Channel.objects.all()
   return render( request, "add_video.html", locals())
@@ -200,11 +200,7 @@ def initialize_upload(youtube, options):
       description=options['description'],
       tags=tags,
       categoryId=options['category'],
-      thumbnails = dict (
-        default=dict(
-          url=options['thumbnail']
-        )
-      )
+      
     ),
     status=dict(
       privacyStatus=options['privacyStatus']
@@ -218,7 +214,7 @@ def initialize_upload(youtube, options):
     media_body=MediaFileUpload(options.get('file', None), chunksize=-1, resumable=True)
   )
 
-  resumable_upload(insert_request)
+  return resumable_upload(insert_request)
 
 def getTime(time_str):
   timeParts = time_str.split(":")
@@ -249,13 +245,19 @@ def editVideo(intro_video, logo, new_video, startTime, endTime):
   new_clip = VideoFileClip(new_video)
   endTime = new_clip.duration if startTime >= endTime else endTime
   new_clip_subclipped = new_clip.subclip(startTime, endTime)
-
-  waterMark = ImageClip(logo).set_duration(new_clip_subclipped.duration).resize(height=50).margin(right=1,top=1, opacity=0).set_pos((0,new_clip_subclipped.size[0]-50))
-
-  watermarked_video = CompositeVideoClip([new_clip_subclipped, waterMark])
-  final_video = concatenate_videoclips([watermarked_video])
-  return final_video
+  print "LOGO", logo, "AWESOMss"
+  waterMark = ImageClip(logo).set_duration(intro_clip.duration).resize(height=150).margin(right=8, top=8, opacity=0).set_pos((0.05,0.7), relative=True)
   
+  watermarked_video = CompositeVideoClip([intro_clip, waterMark])
+  final_video = concatenate_videoclips([intro_clip, watermarked_video])
+  return final_video
+
+def upload_thumbnail(youtube, video_id, file):
+  youtube.thumbnails().set(
+    videoId=video_id,
+    media_body=file
+  ).execute()
+
 
 # This method implements an exponential backoff strategy to resume a
 # failed upload.
@@ -268,7 +270,7 @@ def resumable_upload(insert_request):
       print "Uploading file..."
       status, response = insert_request.next_chunk()
       if 'id' in response:
-        print "Video id '%s' was successfully uploaded." % response['id']
+        return response['id']
       else:
         exit("The upload failed with an unexpected response: %s" % response)
     except HttpError, e:
