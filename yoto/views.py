@@ -113,7 +113,7 @@ def upload(request):
     thumbnail_file = request.FILES.get('thumbnail', False)
     if thumbnail_file:
       import threading
-      my_thread = threading.Thread(target=handleUpload, args=(request,))
+      my_thread = threading.Thread(target=handleUpload, args=(request,thumbnail_file))
       my_thread.start()
       suc_message = "You have successfully submitted the video. It is being proccessed."
     else:
@@ -123,15 +123,15 @@ def upload(request):
   return render( request, "add_video.html", locals())
 
 
-def handleUpload(request):
+def handleUpload(request, thumbnail_file):
 
   if request.method == "POST":
     local_file_name = "/media/t460r/Disk/ZONE2/my/youtube/yoto/media/videos/test.mp4"#download(request.POST['url'])
     
     if local_file_name:
-      thumbnail_file = request.FILES.get('thumbnail', False)
+      
       fs = FileSystemStorage()
-      filename = fs.save('thumbs/' + thumbnail_file.name, thumbnail_file)
+      fs.save('thumbs/' + thumbnail_file.name, thumbnail_file)
       thumb_file_url = os.path.join(BASE_DIR, 'yoto/media/thumbs/' + str( thumbnail_file.name))
       start_time = getTime(request.POST['start_time'])
       end_time =getTime(request.POST['end_time'])
@@ -158,6 +158,7 @@ def handleUpload(request):
       options['file'] = video_local_file_name
       
       video_id = initialize_upload(youtube, options)
+      print video_id
       if video_id:
         upload_thumbnail(youtube, video_id, thumb_file_url )
 
