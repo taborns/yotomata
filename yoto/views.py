@@ -113,7 +113,10 @@ def upload(request):
     thumbnail_file = request.FILES.get('thumbnail', False)
     if thumbnail_file:
       import threading
-      my_thread = threading.Thread(target=handleUpload, args=(request,thumbnail_file))
+      fs = FileSystemStorage()
+      fs.save('thumbs/' + thumbnail_file.name, thumbnail_file)
+      thumb_file_url = os.path.join(BASE_DIR, 'yoto/media/thumbs/' + str( thumbnail_file.name))
+      my_thread = threading.Thread(target=handleUpload, args=(request,thumb_file_url))
       my_thread.setDaemon(False)
       my_thread.start()
       suc_message = "You have successfully submitted the video. It is being proccessed."
@@ -124,16 +127,14 @@ def upload(request):
   return render( request, "add_video.html", locals())
 
 
-def handleUpload(request, thumbnail_file):
+def handleUpload(request, thumb_file_url):
 
   if request.method == "POST":
     local_file_name = download(request.POST['url'])#"/media/t460r/Disk/ZONE2/my/youtube/yoto/media/videos/test.mp4"
     
     if local_file_name:
       
-      fs = FileSystemStorage()
-      fs.save('thumbs/' + thumbnail_file.name, thumbnail_file)
-      thumb_file_url = os.path.join(BASE_DIR, 'yoto/media/thumbs/' + str( thumbnail_file.name))
+      print thumb_file_url;
       start_time = getTime(request.POST['start_time'])
       end_time =getTime(request.POST['end_time'])
       
@@ -148,7 +149,7 @@ def handleUpload(request, thumbnail_file):
 
       new_video = editVideo( intro, logo, local_file_name, start_time, end_time)
       video_local_file_name = local_file_name + str(random.randint(1,1000)) + "videome.mp4"
-      new_video.write_videofile(video_local_file_name,  fps=15,  preset='ultrafast',   threads=20)
+      new_video.write_videofile(video_local_file_name,  fps=15,  preset='ultrafast',   threads=NUM_THREADS)
 
       credentials = channel.getCredential ( configs['web'] )
       youtube = build(
