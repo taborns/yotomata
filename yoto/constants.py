@@ -1,3 +1,3 @@
-HOST = "http://45.33.11.123"
-DOMAIN = "http://45.33.11.123"
+HOST = "li965-123.members.linode.com:8000"
+DOMAIN = "li965-123.members.linode.com:8000"
 NUM_THREADS = 30
