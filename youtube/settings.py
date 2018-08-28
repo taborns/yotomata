@@ -133,4 +133,5 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'yoto/media')
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "yoto/static"),
 ]
+LOGIN_URL = "/login"
 CORS_ORIGIN_ALLOW_ALL=True

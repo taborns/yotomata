@@ -1,3 +1,3 @@
-HOST = "http://localhost:8000"
-DOMAIN = "http://localhost:8000"
+HOST = "http://45.33.11.123"
+DOMAIN = "http://45.33.11.123"
 NUM_THREADS = 30

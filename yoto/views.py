@@ -114,6 +114,7 @@ def upload(request):
     if thumbnail_file:
       import threading
       my_thread = threading.Thread(target=handleUpload, args=(request,thumbnail_file))
+      my_thread.setDaemon(False)
       my_thread.start()
       suc_message = "You have successfully submitted the video. It is being proccessed."
     else:
@@ -126,7 +127,7 @@ def upload(request):
 def handleUpload(request, thumbnail_file):
 
   if request.method == "POST":
-    local_file_name = "/media/t460r/Disk/ZONE2/my/youtube/yoto/media/videos/test.mp4"#download(request.POST['url'])
+    local_file_name = download(request.POST['url'])#"/media/t460r/Disk/ZONE2/my/youtube/yoto/media/videos/test.mp4"
     
     if local_file_name:
       
@@ -143,10 +144,11 @@ def handleUpload(request, thumbnail_file):
       #edit video
       logo = os.path.join(BASE_DIR, 'yoto/media/' + str( channel.logo))
       intro = os.path.join(BASE_DIR, 'yoto/media/' + str( channel.intro))
-      
+      import random 
+
       new_video = editVideo( intro, logo, local_file_name, start_time, end_time)
-      video_local_file_name = local_file_name + "videome.mp4"
-      new_video.write_videofile(local_file_name + "videome.mp4",  fps=15,  preset='ultrafast',   threads=100)
+      video_local_file_name = local_file_name + str(random.randint(1,1000)) + "videome.mp4"
+      new_video.write_videofile(video_local_file_name,  fps=15,  preset='ultrafast',   threads=20)
 
       credentials = channel.getCredential ( configs['web'] )
       youtube = build(
@@ -158,7 +160,7 @@ def handleUpload(request, thumbnail_file):
       options['file'] = video_local_file_name
       
       video_id = initialize_upload(youtube, options)
-      print video_id
+      print "Video ID", video_id
       if video_id:
         upload_thumbnail(youtube, video_id, thumb_file_url )
 
@@ -265,7 +267,8 @@ def editVideo(intro_video, logo, new_video, startTime, endTime):
   waterMark = ImageClip(logo).set_duration(new_clip_subclipped.duration).resize(height=150).margin(right=8, top=8, opacity=0).set_pos((0.05,0.7), relative=True)
   
   watermarked_video = CompositeVideoClip([new_clip_subclipped, waterMark])
-  final_video = concatenate_videoclips([intro_clip, watermarked_video])
+  watermarked_video = watermarked_video.resize(height=intro_clip.size[1], width=intro_clip.size[0])
+  final_video = concatenate_videoclips([intro_clip, watermarked_video], method="compose")
   return final_video
 
 def upload_thumbnail(youtube, video_id, file):
