@@ -4,7 +4,10 @@ from __future__ import unicode_literals
 from django.db import models
 from oauth2client.client import OAuth2Credentials
 # Create your models here.
-
+class Notification(models.Model):
+    message = models.CharField(max_length=200)
+    is_seen = models.BooleanField(default=False)
+    
 class Channel(models.Model):
     name = models.CharField(max_length=200)
     access_token = models.CharField(max_length=300)

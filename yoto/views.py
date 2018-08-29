@@ -110,32 +110,35 @@ def get_authenticated_service(request):
 def upload(request):
 
   if request.method == "POST":
-    thumbnail_file = request.FILES.get('thumbnail', False)
+    thumb_file_url = thumbnail_file = request.FILES.get('thumbnail', None)
+    import threading
+    fs = FileSystemStorage()
+
     if thumbnail_file:
-      import threading
-      fs = FileSystemStorage()
       fs.save('thumbs/' + thumbnail_file.name, thumbnail_file)
       thumb_file_url = os.path.join(BASE_DIR, 'yoto/media/thumbs/' + str( thumbnail_file.name))
-      #handleUpload(request, thumb_file_url)
-      my_thread = threading.Thread(target=handleUpload, args=(request,thumb_file_url))
-      my_thread.setDaemon(False)
-      my_thread.start()
-      suc_message = "You have successfully submitted the video. It is being proccessed."
-    else:
-      err_message = "Please provide a thumbnail"
+
+    #handleUpload(request, thumb_file_url)
+    my_thread = threading.Thread(target=handleUpload, args=(request,thumb_file_url))
+    my_thread.setDaemon(False)
+    my_thread.start()
+    suc_message = "You have successfully submitted the video. It is being proccessed."
 
   channels = models.Channel.objects.all()
   return render( request, "add_video.html", locals())
 
-
-def handleUpload(request, thumb_file_url):
+def handleUpload(request, thumb_file_url=None):
+  try:
+    doUpload(request,thumb_file_url)
+  except Exception as e:
+    models.Notification.objects.create(message="Error : %s" %(e,))
+def doUpload(request, thumb_file_url):
 
   if request.method == "POST":
-    local_file_name = download(request.POST['url'])#"/media/t460r/Disk/ZONE2/my/youtube/yoto/media/videos/test.mp4"
+    local_file_name = "/media/t460r/Disk/ZONE2/my/youtube/yoto/media/videos/test.mp4"#download(request.POST['url'])#"/media/t460r/Disk/ZONE2/my/youtube/yoto/media/videos/test.mp4"
     
     if local_file_name:
       
-      print thumb_file_url;
       start_time = getTime(request.POST['start_time'])
       end_time =getTime(request.POST['end_time'])
       
@@ -147,27 +150,38 @@ def handleUpload(request, thumb_file_url):
       logo = os.path.join(BASE_DIR, 'yoto/media/' + str( channel.logo))
       intro = os.path.join(BASE_DIR, 'yoto/media/' + str( channel.intro))
       import random 
-      print "BEFORE ALL"
-      new_video = editVideo( intro, logo, local_file_name, start_time, end_time)
-      video_local_file_name = local_file_name + str(random.randint(1,1000)) + "videome.mp4"
-      new_video.write_videofile(video_local_file_name,  fps=15,  preset='ultrafast',   threads=NUM_THREADS)
-      print video_local_file_name, "VIDEO LOCAL FILE NAME";
+      
+      if request.POST.get("editVideo"):
+        new_video = editVideo( intro, logo, local_file_name, start_time, end_time)
+        local_file_name = local_file_name + str(random.randint(1,1000)) + "videome.mp4"
+        new_video.write_videofile(local_file_name,  fps=15,  preset='ultrafast',   threads=NUM_THREADS)
+        print local_file_name, "VIDEO LOCAL FILE NAME";
+      
       credentials = channel.getCredential ( configs['web'] )
       youtube = build(
         YOUTUBE_API_SERVICE_NAME, 
         YOUTUBE_API_VERSION,
         http=credentials.authorize(httplib2.Http())
       )
+      
       options = request.POST.copy()
-      options['file'] = video_local_file_name
+      options['file'] = local_file_name
       
       video_id = initialize_upload(youtube, options)
-      print "Video ID", video_id
-      if video_id:
-        upload_thumbnail(youtube, video_id, thumb_file_url )
-
+      models.Notification.objects.create(message="Success : <a href='https://www.youtube.com/watch?v=%s'> Video </a> succesfully uploaded" %(video_id,))
+      
+      if video_id and thumb_file_url:
+        try:
+          upload_thumbnail(youtube, video_id, thumb_file_url )
+        except:
+          models.Notification.objects.create(message="Error : Unable to upload thumbnail to the <a href='https://www.youtube.com/watch?v=%s'> Video </a>" %(video_id,))
+      return video_id
   
-  
+@login_required
+def notifications(request):
+  notifications = list(models.Notification.objects.filter(is_seen=False))
+  models.Notification.objects.filter(is_seen=False).update(is_seen=True)
+  return render(request, "notifications.html", locals())
 
 @login_required
 def oauthCallback(request):
@@ -345,7 +359,7 @@ def getDownloadLink(url):
   except:
     return None
   
-  videoQualites = ['1080p', '720p','360p', ]
+  videoQualites = ['720p','360p', ]
   urls = jsonResponse['urls']
   highest = len(videoQualites)
   final_url = None
