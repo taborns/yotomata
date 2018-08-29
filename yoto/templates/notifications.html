@@ -2,6 +2,6 @@
 
 <ul>
     {% for notification in notifications %}
-        <li>{{ notification.message }} </li>
+        <li>{{ notification.message|safe }} </li>
     {% endfor %}
 </ul>
