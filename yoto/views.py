@@ -116,6 +116,7 @@ def upload(request):
       fs = FileSystemStorage()
       fs.save('thumbs/' + thumbnail_file.name, thumbnail_file)
       thumb_file_url = os.path.join(BASE_DIR, 'yoto/media/thumbs/' + str( thumbnail_file.name))
+      #handleUpload(request, thumb_file_url)
       my_thread = threading.Thread(target=handleUpload, args=(request,thumb_file_url))
       my_thread.setDaemon(False)
       my_thread.start()
@@ -146,11 +147,11 @@ def handleUpload(request, thumb_file_url):
       logo = os.path.join(BASE_DIR, 'yoto/media/' + str( channel.logo))
       intro = os.path.join(BASE_DIR, 'yoto/media/' + str( channel.intro))
       import random 
-
+      print "BEFORE ALL"
       new_video = editVideo( intro, logo, local_file_name, start_time, end_time)
       video_local_file_name = local_file_name + str(random.randint(1,1000)) + "videome.mp4"
       new_video.write_videofile(video_local_file_name,  fps=15,  preset='ultrafast',   threads=NUM_THREADS)
-
+      print video_local_file_name, "VIDEO LOCAL FILE NAME";
       credentials = channel.getCredential ( configs['web'] )
       youtube = build(
         YOUTUBE_API_SERVICE_NAME, 
@@ -265,7 +266,8 @@ def editVideo(intro_video, logo, new_video, startTime, endTime):
   
   endTime = new_clip.duration if startTime >= endTime else endTime
   new_clip_subclipped = new_clip.subclip(startTime, endTime)
-  waterMark = ImageClip(logo).set_duration(new_clip_subclipped.duration).resize(height=150).margin(right=8, top=8, opacity=0).set_pos((0.05,0.7), relative=True)
+  print new_clip_subclipped.size
+  waterMark = ImageClip(logo).set_duration(new_clip_subclipped.duration).resize(height=new_clip_subclipped.size[1]*0.2).margin(right=8, top=8, opacity=0).set_pos((0.05,0.7), relative=True)
   
   watermarked_video = CompositeVideoClip([new_clip_subclipped, waterMark])
   watermarked_video = watermarked_video.resize(height=intro_clip.size[1], width=intro_clip.size[0])

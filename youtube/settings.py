@@ -29,7 +29,8 @@ ALLOWED_HOSTS = [
     '192.168.1.2',
     '45.33.11.123',
     'localhost',
-    'li965-123.members.linode.com'
+    'li965-123.members.linode.com',
+    'youtube.local'
 ]
 
 
@@ -131,8 +132,9 @@ USE_TZ = True
 STATIC_URL = '/static/'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'yoto/media')
-STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, "yoto/static"),
-]
+#STATICFILES_DIRS = [
+#    os.path.join(BASE_DIR, "yoto/static"),
+#]
+STATIC_ROOT = os.path.join(BASE_DIR, 'yoto/static')
 LOGIN_URL = "/login"
 CORS_ORIGIN_ALLOW_ALL=True
