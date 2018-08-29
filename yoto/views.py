@@ -135,7 +135,7 @@ def handleUpload(request, thumb_file_url=None):
 def doUpload(request, thumb_file_url):
 
   if request.method == "POST":
-    local_file_name = "/media/t460r/Disk/ZONE2/my/youtube/yoto/media/videos/test.mp4"#download(request.POST['url'])#"/media/t460r/Disk/ZONE2/my/youtube/yoto/media/videos/test.mp4"
+    local_file_name = download(request.POST['url'])#"/media/t460r/Disk/ZONE2/my/youtube/yoto/media/videos/test.mp4"
     
     if local_file_name:
       
