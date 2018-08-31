@@ -20,6 +20,7 @@ import yoto.views as my_view
 from django.conf.urls.static import static
 
 urlpatterns = [
+    url(r'^$', my_view.upload),
     url(r'^admin/', admin.site.urls),
     url(r'^auth/', my_view.get_authenticated_service ),
     url(r'^upload/', my_view.getVideoDetail ),
@@ -28,7 +29,7 @@ urlpatterns = [
     url(r'^login/', my_view.login_sys),
     url(r'^logout/', my_view.log_out),
     url(r'^notifications/', my_view.notifications),
-    url(r'^finalize/', my_view.upload)
+    
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
