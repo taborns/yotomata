@@ -160,7 +160,7 @@ def getVideoDetail(request):
         youtube_url = request.POST.get("url");
         
         tags = snippet.get("tags") if snippet.get("tags") else []
-        vid_tags = ",".join(snippet.get("tags"))
+        vid_tags = ",".join(tags)
         
         return render(request, "add_video.html", locals())
       else:
