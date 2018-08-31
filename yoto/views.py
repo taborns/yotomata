@@ -106,6 +106,67 @@ def get_authenticated_service(request):
       include_granted_scopes='true')
 
     return render(request, "loginprompt.html", locals())
+
+def video_id(value):
+    from urlparse import urlparse,parse_qs
+    if not value:
+      return value
+    """
+    Examples:
+    - http://youtu.be/SA2iWivDJiE
+    - http://www.youtube.com/watch?v=_oPAwA_Udwc&feature=feedu
+    - http://www.youtube.com/embed/SA2iWivDJiE
+    - http://www.youtube.com/v/SA2iWivDJiE?version=3&amp;hl=en_US
+    """
+    query = urlparse(value)
+    if query.hostname == 'youtu.be':
+        return query.path[1:]
+    if query.hostname in ('www.youtube.com', 'youtube.com'):
+        if query.path == '/watch':
+            p = parse_qs(query.query)
+            return p['v'][0]
+        if query.path[:7] == '/embed/':
+            return query.path.split('/')[2]
+        if query.path[:3] == '/v/':
+            return query.path.split('/')[2]
+    # fail?
+    return None
+
+@login_required
+def getVideoDetail(request):
+    # See full sample for function
+    videoID = video_id(request.POST.get("url"))
+    if request.method == "POST" and video_id(request.POST.get("url")):
+      videoID = video_id(request.POST.get("url"))
+      configs = json.load( open(os.path.abspath(os.path.join(os.path.dirname(__file__),CLIENT_SECRETS_FILE)), "r") )
+      channel = models.Channel.objects.get(id=request.POST.get('channel', None))
+      credentials = channel.getCredential ( configs['web'] )
+      client = build(
+        YOUTUBE_API_SERVICE_NAME, 
+        YOUTUBE_API_VERSION,
+        http=credentials.authorize(httplib2.Http())
+      )
+      
+      response = client.videos().list(
+        part='snippet',
+        id=videoID
+      ).execute()
+      items = response.get("items")
+      
+      if items:
+        snippet = items[0].get("snippet")
+        title = snippet.get("title")
+        description = snippet.get("description")
+        youtube_url = request.POST.get("url");
+        vid_tags = ",".join(snippet.get("tags"))
+        
+        return render(request, "add_video.html", locals())
+      else:
+        err_message = "You have provided invalid youtube URL."
+
+    channels = models.Channel.objects.all()
+    return render( request, "new_video.html", locals())
+
 @login_required 
 def upload(request):
 

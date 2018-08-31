@@ -1,0 +1,34 @@
+{% include 'header.html' %}
+<div class="col-sm-6 col-sm-offset-3 panel panel-primary">
+    <div class="panel-heading">
+        Add Videos Here
+    </div>
+    <div class="panel-body">
+            {% if suc_message %}
+                <div class='h4 text-success'> {{suc_message}} </div>
+            {% elif err_message %}
+                <div class='h4 text-danger'> {{ err_message }} </div>
+            {% endif %}
+    <fieldset>
+        <legend>Add video</legend>
+        
+        <form method="post" action="/upload/" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="form-group">
+                <label>Youtube URL</label>
+                <input type="text" placeholder="Youtube URL" name="url" class="form-control">
+            </div>
+
+            <div class="form-group">
+                <label>Channel</label>
+                <select  class="form-control" name="channel">
+                    {% for channel in channels %}
+                    <option value='{{ channel.pk }}'>{{ channel.name | title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <input type="submit" value="Save" class="btn btn-primary">
+        </form>
+    </fieldset>
+</div>

@@ -22,12 +22,13 @@ from django.conf.urls.static import static
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
     url(r'^auth/', my_view.get_authenticated_service ),
-    url(r'^upload/', my_view.upload ),
+    url(r'^upload/', my_view.getVideoDetail ),
     url(r'^callback/', my_view.oauthCallback),
     url(r'^channels/', my_view.channels),
     url(r'^login/', my_view.login_sys),
     url(r'^logout/', my_view.log_out),
-    url(r'^notifications/', my_view.notifications)
+    url(r'^notifications/', my_view.notifications),
+    url(r'^finalize/', my_view.upload)
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

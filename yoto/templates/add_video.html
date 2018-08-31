@@ -12,30 +12,31 @@
     <fieldset>
         <legend>Add video</legend>
         
-        <form method="post" action="/upload/" enctype="multipart/form-data">
+        <form method="post" action="/finalize/" enctype="multipart/form-data">
             {% csrf_token %}
             <div class="form-group">
             <label> Video Title </label>
-            <input type="text" placeholder="Video Title" name='title' class="form-control">
+            <input type="text" placeholder="Video Title" value="{{title}}" name='title' class="form-control">
             </div>
             
             <div class="form-group">
             <label> Video Description</label>
-            <textarea class="form-control" placeholder="Video Description" name='description'></textarea>
+            <textarea class="form-control" placeholder="Video Description" name='description'>{{ description}}
+            </textarea>
             </div>
 
             <div class="form-group">
                 <label>Keywords (Comma separated)</label>
-                <input type="text" placeholder="Keywords" name="tags" class="form-control">
+                
+                <input type="text" placeholder="Keywords" value="{{ vid_tags }}" name="tags" class="form-control">
             </div>
             <div class="form-group">
-                <label>Youtube URL</label>
-                <input type="text" placeholder="Youtube URL" name="url" class="form-control">
+                <input type="hidden" placeholder="Youtube URL" name="url" value="{{youtube_url}}" class="form-control">
             </div>
 
             <div class="form-group">
                 <label>Edit video</label>
-                <input type="checkbox" name="editVideo" checked/>
+                <input type="checkbox" name="editVideo"/>
             </div>
             <div class="form-group">
                 <label>Start time</label>
@@ -66,11 +67,8 @@
 
             <div class="form-group">
                 <label>Channel</label>
-                <select  class="form-control" name="channel">
-                    {% for channel in channels %}
-                    <option value='{{ channel.pk }}'>{{ channel.name | title }}</option>
-                    {% endfor %}
-                </select>
+                <div class="h4">{{ channel.name }}</div>
+                <input type="hidden" disabled value="{{ channel.pk }}" name="channel">
             </div>
             
             <input type="submit" value="Save" class="btn btn-primary">
