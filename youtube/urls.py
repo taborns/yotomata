@@ -28,6 +28,7 @@ urlpatterns = [
     url(r'^channels/', my_view.channels),
     url(r'^login/', my_view.login_sys),
     url(r'^logout/', my_view.log_out),
+    url(r'^finalize/', my_view.upload),
     url(r'^notifications/', my_view.notifications),
     
 ]
