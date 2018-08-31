@@ -186,7 +186,7 @@ def upload(request):
     suc_message = "You have successfully submitted the video. It is being proccessed."
 
   channels = models.Channel.objects.all()
-  return render( request, "add_video.html", locals())
+  return render( request, "new_video.html", locals())
 
 def handleUpload(request, thumb_file_url=None):
   try:
@@ -229,13 +229,13 @@ def doUpload(request, thumb_file_url):
       options['file'] = local_file_name
       
       video_id = initialize_upload(youtube, options)
-      models.Notification.objects.create(message="Success : <a href='https://www.youtube.com/watch?v=%s'> Video </a> succesfully uploaded" %(video_id,))
+      models.Notification.objects.create(message="Success : The <a href='https://www.youtube.com/watch?v=%s'> Video </a> %s succesfully uploaded" %(video_id,request.POST.get("title")))
       
       if video_id and thumb_file_url:
         try:
           upload_thumbnail(youtube, video_id, thumb_file_url )
         except:
-          models.Notification.objects.create(message="Error : Unable to upload thumbnail to the <a href='https://www.youtube.com/watch?v=%s'> Video </a>" %(video_id,))
+          models.Notification.objects.create(message="Error : Unable to upload thumbnail to the <a href='https://www.youtube.com/watch?v=%s'> Video </a> %s" %(video_id,request.POST.get("title") ))
       return video_id
   
 @login_required
