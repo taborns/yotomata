@@ -192,6 +192,7 @@ def handleUpload(request, thumb_file_url=None):
   try:
     doUpload(request,thumb_file_url)
   except Exception as e:
+    raise e
     models.Notification.objects.create(message="Error : %s" %(e,))
 def doUpload(request, thumb_file_url):
 
@@ -204,6 +205,7 @@ def doUpload(request, thumb_file_url):
       end_time =getTime(request.POST['end_time'])
       
       #get channel
+      print "CHAN", request.POST.get('channel', None)
       channel = models.Channel.objects.get(id=request.POST.get('channel', None))
       configs = json.load( open(os.path.abspath(os.path.join(os.path.dirname(__file__),CLIENT_SECRETS_FILE)), "r") )
       
