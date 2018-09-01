@@ -7,6 +7,8 @@ from oauth2client.client import OAuth2Credentials
 class Notification(models.Model):
     message = models.CharField(max_length=200)
     is_seen = models.BooleanField(default=False)
+    done = models.BooleanField(default=False)
+
     
 class Channel(models.Model):
     name = models.CharField(max_length=200)

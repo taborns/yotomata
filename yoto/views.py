@@ -191,15 +191,18 @@ def upload(request):
   return render( request, "new_video.html", locals())
 
 def handleUpload(request, thumb_file_url=None):
+  notifications_object = models.Notification.objects.create(message="Processing <b>%s</b> started" %(request.POST.get("title")))
   try:
-    doUpload(request,thumb_file_url)
+    doUpload(request,thumb_file_url, notifications_object)
   except Exception as e:
-    raise e
-    models.Notification.objects.create(message="Error : %s" %(e,))
-def doUpload(request, thumb_file_url):
+    notifications_object.message="Error #0 : %s" %(e,)
+    notifications_object.done = True
+    notifications_object.save()
+
+def doUpload(request, thumb_file_url, notifications_object):
 
   if request.method == "POST":
-    local_file_name = download(request.POST['url'])#"/media/t460r/Disk/ZONE2/my/youtube/yoto/media/videos/test.mp4"
+    local_file_name = download(request.POST['url'], notifications_object)#"/media/t460r/Disk/ZONE2/my/youtube/yoto/media/videos/test.mp4"
     
     if local_file_name:
       
@@ -217,6 +220,8 @@ def doUpload(request, thumb_file_url):
       import random 
       
       if request.POST.get("editVideo"):
+        notifications_object.message="Progress : Editing video %s" %(request.POST.get("title") )
+        notifications_object.save()
         new_video = editVideo( intro, logo, local_file_name, start_time, end_time)
         local_file_name = local_file_name + str(random.randint(1,1000)) + "videome.mp4"
         new_video.write_videofile(local_file_name,  fps=15,  preset='ultrafast',   threads=NUM_THREADS)
@@ -233,19 +238,25 @@ def doUpload(request, thumb_file_url):
       options['file'] = local_file_name
       
       video_id = initialize_upload(youtube, options)
-      models.Notification.objects.create(message="Success : The <a href='https://www.youtube.com/watch?v=%s'> Video </a> %s succesfully uploaded" %(video_id,request.POST.get("title")))
-      
+      notifications_object.message="Success : The <a href='https://www.youtube.com/watch?v=%s'> Video </a> %s succesfully uploaded" %(video_id,request.POST.get("title"))
+      notifications_object.save()
+
       if video_id and thumb_file_url:
         try:
           upload_thumbnail(youtube, video_id, thumb_file_url )
         except:
-          models.Notification.objects.create(message="Error : Unable to upload thumbnail to the <a href='https://www.youtube.com/watch?v=%s'> Video </a> %s" %(video_id,request.POST.get("title") ))
+          notifications_object.message="Error : Unable to upload thumbnail to the <a href='https://www.youtube.com/watch?v=%s'> Video </a> %s" %(video_id,request.POST.get("title") )
+          notifications_object.save()
+      
+      notifications_object.done = True
+      notifications_object.save()
+
       return video_id
   
 @login_required
 def notifications(request):
   notifications = list(models.Notification.objects.filter(is_seen=False))
-  models.Notification.objects.filter(is_seen=False).update(is_seen=True)
+  models.Notification.objects.filter(is_seen=False, done=True).update(is_seen=True)
   return render(request, "notifications.html", locals())
 
 @login_required
@@ -395,13 +406,17 @@ def resumable_upload(insert_request):
       print "Sleeping %f seconds and then retrying..." % sleep_seconds
       time.sleep(sleep_seconds)
 
-def download(url):
-  final_url = getDownloadLink(url);
-  print "DOwnloading"
+def download(url, notifications_object):
+  final_url = getDownloadLink(url, notifications_object);
+  
   if not final_url:
     return final_url
-
-  response = requests.get(final_url, stream=True)
+  try:
+    response = requests.get(final_url, stream=True)
+  except:
+    notifications_object.message = "Failed to download the <a href='%s'>video</a>" %(url,)
+    notifications_object.save()
+    return
   random.randint(1000, 1000000)
   file_name = random.choice(['filie_','tabo_','youtu_','video_'])
   file_name += str( random.randint(100, 100000000) )
@@ -415,16 +430,18 @@ def download(url):
   
   return file_name
 
-def getDownloadLink(url):
+def getDownloadLink(url, notifications_object):
   endpoint = "https://www.saveitoffline.com/process/?url=youtube-url&type=json".replace("youtube-url", url)
   
   try:
     response = requests.get(endpoint)
     jsonResponse = response.json()
   except:
+    notifications_object.message = "Unable to get the download url for <a href='%s'>video</a>" %(url,)
+    notifications_object.save()
     return None
   
-  videoQualites = ['720p','360p', ]
+  videoQualites = ['360','720p', '1080']
   urls = jsonResponse['urls']
   highest = len(videoQualites)
   final_url = None
