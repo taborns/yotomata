@@ -412,9 +412,11 @@ def download(url, notifications_object):
   if not final_url:
     return final_url
   try:
+    print "FINAL URL", final_url
     response = requests.get(final_url, stream=True)
   except:
     notifications_object.message = "Failed to download the <a href='%s'>video</a>" %(url,)
+    notifications_object.done = True;
     notifications_object.save()
     return
   random.randint(1000, 1000000)
@@ -438,6 +440,7 @@ def getDownloadLink(url, notifications_object):
     jsonResponse = response.json()
   except:
     notifications_object.message = "Unable to get the download url for <a href='%s'>video</a>" %(url,)
+    notifications_object.done = True
     notifications_object.save()
     return None
   
