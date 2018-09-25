@@ -135,22 +135,32 @@ def video_id(value):
 @login_required
 def getVideoDetail(request):
     # See full sample for function
+    
     videoID = video_id(request.POST.get("url"))
     if request.method == "POST" and video_id(request.POST.get("url")):
       videoID = video_id(request.POST.get("url"))
       configs = json.load( open(os.path.abspath(os.path.join(os.path.dirname(__file__),CLIENT_SECRETS_FILE)), "r") )
-      channel = models.Channel.objects.get(id=request.POST.get('channel', None))
-      credentials = channel.getCredential ( configs['web'] )
+      selected_channels_ids = [int(channel) for channel in request.POST.getlist('channels')]
+      selected_channels = models.Channel.objects.filter(id__in=selected_channels_ids)
+      selected_channels_credential = []
+
+      for selected_channel in selected_channels:
+        selected_channels_credential.append(selected_channel.getCredential ( configs['web'] ) )
+      import random
+      
+      random_credential = random.choice( selected_channels_credential)
+
       client = build(
         YOUTUBE_API_SERVICE_NAME, 
         YOUTUBE_API_VERSION,
-        http=credentials.authorize(httplib2.Http())
+        http=random_credential.authorize(httplib2.Http())
       )
       
       response = client.videos().list(
         part='snippet',
         id=videoID
       ).execute()
+
       items = response.get("items")
       
       if items:
@@ -171,7 +181,7 @@ def getVideoDetail(request):
 
 @login_required 
 def upload(request):
-
+  
   if request.method == "POST":
     thumb_file_url = thumbnail_file = request.FILES.get('thumbnail', None)
     import threading
@@ -210,46 +220,47 @@ def doUpload(request, thumb_file_url, notifications_object):
       end_time =getTime(request.POST['end_time'])
       
       #get channel
-      print "CHAN", request.POST.get('channel', None)
-      channel = models.Channel.objects.get(id=request.POST.get('channel', None))
+      
+      selected_channels = models.Channel.objects.get(id=[int(chanel_) for chanel_ in request.POST.getlist('channels')])
       configs = json.load( open(os.path.abspath(os.path.join(os.path.dirname(__file__),CLIENT_SECRETS_FILE)), "r") )
       
-      #edit video
-      logo = os.path.join(BASE_DIR, 'yoto/media/' + str( channel.logo))
-      intro = os.path.join(BASE_DIR, 'yoto/media/' + str( channel.intro))
-      import random 
-      
-      if request.POST.get("editVideo"):
-        notifications_object.message="Progress : Editing video %s" %(request.POST.get("title") )
-        notifications_object.save()
-        new_video = editVideo( intro, logo, local_file_name, start_time, end_time)
-        local_file_name = local_file_name + str(random.randint(1,1000)) + "videome.mp4"
-        new_video.write_videofile(local_file_name,  fps=15,  preset='ultrafast',   threads=NUM_THREADS)
-        print local_file_name, "VIDEO LOCAL FILE NAME";
-      
-      credentials = channel.getCredential ( configs['web'] )
-      youtube = build(
-        YOUTUBE_API_SERVICE_NAME, 
-        YOUTUBE_API_VERSION,
-        http=credentials.authorize(httplib2.Http())
-      )
-      
-      options = request.POST.copy()
-      options['file'] = local_file_name
-      
-      video_id = initialize_upload(youtube, options)
-      notifications_object.message="Success : The <a href='https://www.youtube.com/watch?v=%s'> Video </a> %s succesfully uploaded" %(video_id,request.POST.get("title"))
-      notifications_object.save()
-
-      if video_id and thumb_file_url:
-        try:
-          upload_thumbnail(youtube, video_id, thumb_file_url )
-        except:
-          notifications_object.message="Error : Unable to upload thumbnail to the <a href='https://www.youtube.com/watch?v=%s'> Video </a> %s" %(video_id,request.POST.get("title") )
+      for index, channel in enumerate(selected_channels):
+        #edit video
+        logo = os.path.join(BASE_DIR, 'yoto/media/' + str( channel.logo))
+        intro = os.path.join(BASE_DIR, 'yoto/media/' + str( channel.intro))
+        import random 
+        
+        if request.POST.get("editVideo"):
+          notifications_object.message="Progress ( <b>%d</b>/%d): Editing video %s for channel %s" %(index, len(selected_channels), request.POST.get("title"), channel.name )
           notifications_object.save()
-      
-      notifications_object.done = True
-      notifications_object.save()
+          new_video = editVideo( intro, logo, local_file_name, start_time, end_time)
+          local_file_name = local_file_name + str(random.randint(1,1000)) + "videome.mp4"
+          new_video.write_videofile(local_file_name,  fps=15,  preset='ultrafast',   threads=NUM_THREADS)
+          print local_file_name, "VIDEO LOCAL FILE NAME";
+        
+        credentials = channel.getCredential ( configs['web'] )
+        youtube = build(
+          YOUTUBE_API_SERVICE_NAME, 
+          YOUTUBE_API_VERSION,
+          http=credentials.authorize(httplib2.Http())
+        )
+        
+        options = request.POST.copy()
+        options['file'] = local_file_name
+        
+        video_id = initialize_upload(youtube, options)
+        notifications_object.message="Success (<b>%d</b><b>/%d) : The <a href='https://www.youtube.com/watch?v=%s'> Video </a> %s succesfully uploaded to %s" %(index, len(selected_channels), video_id,request.POST.get("title"), channel.name)
+        notifications_object.save()
+
+        if video_id and thumb_file_url:
+          try:
+            upload_thumbnail(youtube, video_id, thumb_file_url )
+          except:
+            notifications_object.message="Error (<b>%d</b><b>/%d): Unable to upload thumbnail to the <a href='https://www.youtube.com/watch?v=%s'> Video </a> %s" %(index, len(selected_channels),video_id,request.POST.get("title") )
+            notifications_object.save()
+        
+        notifications_object.done = True
+        notifications_object.save()
 
       return video_id
   
@@ -424,7 +435,7 @@ def download(url, notifications_object):
   file_name += str( random.randint(100, 100000000) )
   file_name += ".mp4"
   file_name = os.path.join(BASE_DIR, 'yoto/media/videos/' + str( file_name))
-  
+  print "FILE NAME", file_name
   with open(file_name, 'wb') as f:
     for chunk in response.iter_content(chunk_size=1024): 
       if chunk: # filter out keep-alive new chunks
@@ -438,7 +449,7 @@ def getDownloadLink(url, notifications_object):
   try:
     response = requests.get(endpoint)
     jsonResponse = response.json()
-  except:
+  except e:
     notifications_object.message = "Unable to get the download url for <a href='%s'>video</a>" %(url,)
     notifications_object.done = True
     notifications_object.save()

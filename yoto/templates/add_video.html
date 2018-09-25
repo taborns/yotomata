@@ -66,9 +66,13 @@
             </div>
 
             <div class="form-group">
-                <label>Channel</label>
-                <div class="h4">{{ channel.name }}</div>
-                <input type="hidden"  value="{{ channel.pk }}" name="channel">
+                <label>Channels</label>
+                
+                {% for channel in selected_channels %}
+                    <div class="h4">{{ channel.name }}</div>
+                    <input type="hidden"  value="{{ channel.pk }}" name="channels">
+                {% endfor %}
+
             </div>
             
             <input type="submit" value="Save" class="btn btn-primary">
