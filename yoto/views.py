@@ -221,7 +221,7 @@ def doUpload(request, thumb_file_url, notifications_object):
       
       #get channel
       
-      selected_channels = models.Channel.objects.get(id=[int(chanel_) for chanel_ in request.POST.getlist('channels')])
+      selected_channels = models.Channel.objects.get(id__in=[int(chanel_) for chanel_ in request.POST.getlist('channels')])
       configs = json.load( open(os.path.abspath(os.path.join(os.path.dirname(__file__),CLIENT_SECRETS_FILE)), "r") )
       
       for index, channel in enumerate(selected_channels):
